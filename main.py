@@ -2,46 +2,50 @@ import json
 import graphviz
 import re
 import sys
+import os
 
-#removes special chars from node name
 def clean_node_name(name):
+    """Remove special characters from node name."""
     return re.sub(r"[^a-zA-Z0-9_]+", "_", name)
 
+def add_node(dot, node_name, shape='box', color='#81C784', fontcolor='#1A4876'):
+    """Add a node with specified attributes to the graph."""
+    dot.node(node_name, shape=shape, style='filled', color=color, fontcolor=fontcolor, height='0.6')
 
-def visualize_iam_policy(json_data, output_file='iam_policy_graph'):
+def add_edge(dot, source, target, color='#4CAF50'):
+    """Add an edge with specified attributes to the graph."""
+    dot.edge(source, target, color=color, style='dashed', penwidth='1.2')
+
+def visualize_iam_policy(iam_policy, output_file='iam_policy_graph'):
     try:
-        iam_policy = json.loads(json_data)
+        iam_policy = json.loads(iam_policy)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON data: {e}")
         return
 
-    dot = graphviz.Digraph(comment='IAM Policy Graph', format='png', graph_attr={'bgcolor': '#212121', 'rankdir': 'LR', 'fontcolor': 'white'})
-# Adds nodes and edges for each binding in IAM policy
+    dot = graphviz.Digraph(comment='IAM Policy Graph', format='png', graph_attr={'bgcolor': '#F2F2F2', 'rankdir': 'LR'})
 
     for binding in iam_policy.get('bindings', []):
         role = binding.get('role', 'unknown_role')
         for member in binding.get('members', []):
+            member_node = clean_node_name(member)
+
             if member.startswith('serviceAccount:'):
-                member_node = clean_node_name(member)
-                dot.node(member_node, shape='box', style='filled', color='#1565C0', fontcolor='white', height='0.6')
-                dot.edge(member_node, role, color='#4CAF50', style='dashed', penwidth='1.2')
+                add_node(dot, member_node, shape='box', color='#64B5F6')
             elif member.startswith('user:'):
-                member_node = clean_node_name(member)
-                dot.node(member_node, shape='ellipse', style='filled', color='#FFD54F', fontcolor='#212121', height='0.6')
-                dot.edge(member_node, role, color='#4CAF50', style='dashed', penwidth='1.2')
+                add_node(dot, member_node, shape='ellipse', color='#FFD54F')
             else:
-                member_node = clean_node_name(member)
-                dot.node(member_node, shape='box', style='filled', color='#2E7D32', fontcolor='white', height='0.6')
-                dot.edge(member_node, role, color='#4CAF50', style='dashed', penwidth='1.2')
+                add_node(dot, member_node, color='#81C784')
 
-        role_node = clean_node_name(role)
-        dot.node(role_node, shape='box', style='filled', color='#2E7D32', fontcolor='white', height='0.6')
+            add_edge(dot, member_node, clean_node_name(role))
 
-    dot.render(output_file, cleanup=True)
+        add_node(dot, clean_node_name(role))
 
-    print(f"IAM Policy visualization saved as {output_file}.png")
+    output_path = os.path.join(os.path.dirname(__file__), f"{output_file}.png")
+    dot.render(output_path, cleanup=True)
 
-#takes json file as input
+    print(f"IAM Policy visualization saved as {output_path}")
+
 def main(file_path):
     try:
         with open(file_path, 'r') as file:

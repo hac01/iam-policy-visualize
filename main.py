@@ -3,16 +3,24 @@ import graphviz
 import re
 import sys
 import os
+import hashlib
 
 def clean_node_name(name):
     """Remove special characters from node name."""
     return re.sub(r"[^a-zA-Z0-9_]+", "_", name)
 
-def add_node(dot, node_name, shape='box', color='#81C784', fontcolor='#1A4876'):
+def get_unique_color(name):
+    """Generate a light color based on the hash of the name."""
+    hash_object = hashlib.sha256(name.encode())
+    hash_hex = hash_object.hexdigest()
+    # Use the last 6 characters of the hash to ensure lighter colors
+    return '#' + hash_hex[-6:]
+
+def add_node(dot, node_name, shape='box', color='#E1F5FE', fontcolor='#000000'):
     """Add a node with specified attributes to the graph."""
     dot.node(node_name, shape=shape, style='filled', color=color, fontcolor=fontcolor, height='0.6')
 
-def add_edge(dot, source, target, color='#4CAF50'):
+def add_edge(dot, source, target, color='#81D4FA'):
     """Add an edge with specified attributes to the graph."""
     dot.edge(source, target, color=color, style='dashed', penwidth='1.2')
 
@@ -31,20 +39,21 @@ def visualize_iam_policy(iam_policy, output_file='iam_policy_graph'):
             member_node = clean_node_name(member)
 
             if member.startswith('serviceAccount:'):
-                add_node(dot, member_node, shape='box', color='#64B5F6')
+                service_account_color = get_unique_color(member)
+                add_node(dot, member_node, shape='box', color=service_account_color, fontcolor='#000000')
             elif member.startswith('user:'):
-                add_node(dot, member_node, shape='ellipse', color='#FFD54F')
+                add_node(dot, member_node, shape='ellipse', color='#FFF9C4', fontcolor='#000000')
             else:
-                add_node(dot, member_node, color='#81C784')
+                add_node(dot, member_node, color='#E1F5FE')
 
-            add_edge(dot, member_node, clean_node_name(role))
+            add_edge(dot, member_node, clean_node_name(role), color='#81D4FA')
 
-        add_node(dot, clean_node_name(role))
+        add_node(dot, clean_node_name(role), color='#E1F5FE')
 
-    output_path = os.path.join(os.path.dirname(__file__), f"{output_file}")
+    output_path = os.path.join(os.path.dirname(__file__), f"{output_file}.png")
     dot.render(output_path, cleanup=True)
 
-    print(f"IAM Policy visualization saved as {output_path}.png")
+    print(f"IAM Policy visualization saved as {output_path}")
 
 def main(file_path):
     try:

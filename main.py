@@ -53,7 +53,7 @@ def visualize_iam_policy(iam_policy, output_file='iam_policy_graph'):
     output_path = os.path.join(os.path.dirname(__file__), f"{output_file}")
     dot.render(output_path, cleanup=True)
 
-    print(f"IAM Policy visualization saved as {output_path}")
+    print(f"IAM Policy visualization saved as {output_path}.png")
 
 def main(file_path):
     try:
